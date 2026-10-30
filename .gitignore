@@ -1,0 +1,10 @@
+node_modules/
+local/
+work/
+.venv/
+.env*
+.dev.vars*
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.DS_Store

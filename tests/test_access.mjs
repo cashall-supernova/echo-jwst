@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {pbkdf2Sync} from 'node:crypto';
+import {verifyLogin,makeSession,validSession,parseVerifier,sessionFromHeaders,SESSION_SECONDS} from '../lib/access-crypto.ts';
+
+const verifier={salt:'1234567890abcdef1234567890abcdef',hash:''};
+verifier.hash=pbkdf2Sync('team\nlocal-test-only',Buffer.from(verifier.salt,'hex'),100000,32,'sha256').toString('hex');
+assert.equal(await verifyLogin(' TEAM ','local-test-only',verifier),true);
+assert.equal(await verifyLogin('team','wrong-password',verifier),false);
+assert.equal(await verifyLogin('someone-else','local-test-only',verifier),false);
+assert.equal(parseVerifier('{}'),null);
+const secret='test-session-key-only-not-a-production-secret',now=Date.now();
+const session=await makeSession(secret,verifier,now);
+assert.equal(await validSession(session,secret,verifier,now),true);
+assert.equal(await validSession(session,secret,verifier,now+(SESSION_SECONDS+1)*1000),false);
+assert.equal(await validSession(session.replace('v1.','v1.9'),secret,verifier,now),false);
+assert.equal(await validSession(session.slice(0,-1)+(session.endsWith('0')?'1':'0'),secret,verifier,now),false);
+assert.equal(await validSession(session,secret+'changed',verifier,now),false);
+assert.equal(await validSession(session,secret,{...verifier,hash:'a'.repeat(64)},now),false);
+assert.equal(await validSession('',secret,verifier,now),false);
+assert.equal(sessionFromHeaders(new Headers({'Cookie':`other=hello; __Host-echo-session=${session}`})),session);
+console.log('Team login, wrong credentials, signed sessions, expiry, tampering and credential rotation passed');

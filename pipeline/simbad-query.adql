@@ -1,0 +1,1 @@
+SELECT b.main_id,b.ra,b.dec,b.rvz_redshift,b.rvz_type,b.rvz_qual,b.rvz_bibcode,b.coo_bibcode,b.otype,i.ids FROM basic AS b LEFT JOIN ids AS i ON b.oid=i.oidref WHERE b.otype='SN*' AND b.rvz_redshift < 0.02

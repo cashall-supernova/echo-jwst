@@ -1,0 +1,7 @@
+'use client';
+import {archiveSignIn} from '@/lib/archive-client';
+import {useState} from 'react';
+export default function TeamLogin(){
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ return <main className="team-login"><div className="login-card"><span className="login-mark" aria-hidden="true">✳</span><p className="eyebrow">ECHO · SUPERNOVA ARCHIVE</p><h1>A closer look<br/>starts here.</h1><p className="login-intro">JWST images and spectra of supernovae.<br/>Sign in with your team login to explore the archive.</p><form onSubmit={async event=>{event.preventDefault();setBusy(true);setError('');const form=new FormData(event.currentTarget);try{await archiveSignIn(String(form.get('username')||''),String(form.get('password')||''))}catch(e){setError(e instanceof Error?e.message:'Could not sign in.');setBusy(false)}}}><label>Username<input name="username" autoComplete="username" required maxLength={128} autoCapitalize="none" spellCheck={false}/></label><label>Password<input name="password" type="password" autoComplete="current-password" required maxLength={1024}/></label>{error&&<p className="login-error" role="alert">{error}</p>}<button className="btn dark" disabled={busy}>{busy?'Signing in…':'Enter ECHO →'}</button></form><a className="login-hiss" href="https://cashall-supernova.github.io/hiss-spectra/">Visit HISS · spectra & light curves ↗</a></div><p className="login-foot">Team access · Images, spectra and downloads require sign-in</p></main>
+}

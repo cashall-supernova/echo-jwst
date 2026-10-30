@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {markerWavelength,SPECTRAL_LINES,commonLineIds} from '../lib/spectral-lines.ts';
+assert.equal(markerWavelength(10,.02,false,0),10.2);
+assert.equal(markerWavelength(10,.02,true,0),10);
+const blue=markerWavelength(10,.02,true,10000),red=markerWavelength(10,.02,true,-10000);
+assert.ok(blue<10&&red>10);
+assert.ok(Math.abs(blue*red-100)<1e-10);
+assert.ok(Math.abs(markerWavelength(10,.02,false,10000)/blue-1.02)<1e-12);
+for(const v of [NaN,Infinity,50001,-50001])assert.equal(markerWavelength(10,0,false,v),null);
+assert.equal(markerWavelength(10,null,false,0),null);
+assert.equal(markerWavelength(10,-1,false,0),null);
+assert.equal(markerWavelength(-10,0,false,0),null);
+assert.equal(new Set(SPECTRAL_LINES.map(l=>l.id)).size,SPECTRAL_LINES.length);
+assert.ok(commonLineIds().some(id=>SPECTRAL_LINES.find(l=>l.id===id).wave>20));
+console.log('Reference-line redshift, relativistic velocity sign, invalid inputs, and MIR coverage passed');
