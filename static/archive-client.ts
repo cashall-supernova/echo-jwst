@@ -9,7 +9,7 @@ const objectUrls=new Set<string>();
 const encode=(raw:Uint8Array)=>btoa(String.fromCharCode(...raw));
 const decode=(raw:string)=>Uint8Array.from(atob(raw),c=>c.charCodeAt(0));
 async function loadLock(){
- const r=await fetch(base+'lock.json',{cache:'no-store'});if(!r.ok)throw Error('The archive is temporarily unavailable. Please try again.');
+ const r=await fetch(base+'lock.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('The archive is temporarily unavailable. Please try again.');
  const value=await r.json() as Lock;
  if(value.version!==1||!Number.isInteger(value.iterations)||value.iterations<100000||value.iterations>2000000||!/^data\/[a-f0-9]{64}\.bin$/.test(value.manifest))throw Error('Invalid archive configuration.');
  lock=value;return value;
@@ -26,7 +26,7 @@ export async function restoreSession(){
  try{const s=JSON.parse(saved);if(s.salt!==current.salt||Date.now()>s.until)throw Error();await unlock(decode(s.key),current);sessionUntil=s.until;return true}catch{try{sessionStorage.removeItem(sessionName)}catch{};return false}
 }
 export async function archiveSignIn(username:string,password:string){
- const current=lock||await loadLock();
+ const current=await loadLock();
  const raw=await deriveKey(username,password,current);
  try{await unlock(raw,current)}catch(error){if(error instanceof DOMException&&error.name==='OperationError')throw Error('Username or password not recognised.');throw error}
  sessionUntil=Date.now()+12*3600000;
