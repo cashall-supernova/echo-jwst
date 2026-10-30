@@ -46,3 +46,20 @@ The HISS reciprocal links should use the public ECHO origin `https://cashall-sup
 The image catalogue selects reported z < 0.02. The spectra catalogue searches all redshifts and opens with the same nearby filter. TNS is supplemented by historical OSC and SIMBAD records. Missing redshifts, unclassified objects and incomplete historical catalogues limit the sample; archive footprint coverage is not a confirmed SN detection.
 
 Colour previews currently require three usable filters from the same UTC day, instrument and program; MIRI and NIRCam remain separate. Multi-day mosaics are deliberately excluded. Display contrast, spectral binning, smoothing, epoch offsets and line markers change the visualisation, not the original downloaded measurements. No forced photometry or independent star-based registration is performed.
+
+## Reviewed SN positions
+
+The updater can apply individually reviewed optical positions from the ignored
+`local/position-refinements.json` file (`version: 1`, `objects` keyed by canonical
+SN name). A record contains reviewed RA/Dec, the original catalogue source and
+coordinates, a review date, method, uncertainty note and reference URLs. These
+measurements are included in the encrypted catalogue, never the public source.
+The `pipeline/positions.py` module validates them before footprint matching.
+A change to the source catalogue position beyond 0.001 arcsec suspends the
+refinement for review; no JWST peak is automatically selected as an SN.
+
+Refined cutouts retain the archive WCS and record adopted coordinates in SNRA /
+SNDEC, the original position in CATRA / CATDEC, and provenance in SNPSRC /
+CATPSRC / POSSHIFT. The image page documents the adopted position and links its
+optical evidence. Recentring does not reset an image's first-seen date. Keep the
+private refinement file when moving the updater to another machine.

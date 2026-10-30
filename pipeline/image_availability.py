@@ -13,6 +13,7 @@ def enrich(snapshot, previous, root):
             if row.get('dataRights', 'PUBLIC') == 'PUBLIC':
                 public[(row.get('obs_id'), row.get('dataURL'))] = row
     old = {(s['name'], o['id']): o for s in (previous or {}).get('objects', []) for o in s['observations']}
+    old_uri = {(s['name'], o['uri']): o for s in (previous or {}).get('objects', []) for o in s['observations']}
     checked = snapshot['updatedAt']
     current_mjd = datetime.fromisoformat(checked.replace('Z', '+00:00')).timestamp() / 86400 + 40587
     for sn in snapshot['objects']:
@@ -24,7 +25,8 @@ def enrich(snapshot, previous, root):
             except (TypeError, ValueError):
                 release = None
             image['publicReleaseMjd'] = release if release is not None and math.isfinite(release) and 0 < release <= current_mjd else None
-            prior = old.get((sn['name'], image['id']))
+            # A new position changes the cutout ID, not the archive release date.
+            prior = old.get((sn['name'], image['id'])) or old_uri.get((sn['name'], image['uri']))
             # Do not fabricate first-seen times for already-indexed legacy data.
             image['firstIndexedAt'] = prior.get('firstIndexedAt') if prior else checked
     return snapshot

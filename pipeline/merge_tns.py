@@ -123,6 +123,7 @@ def merge(historical, tns_rows, timestamp):
                'references': list(dict.fromkeys(refs)), 'reference_urls': [source_url], 'catalogue_status': 'classified',
                'provenance': {'catalogue': 'TNS', 'source_url': source_url, 'snapshot_at': timestamp,
                               'source_modified_at': tns.get('lastmodified'), 'objid': tns.get('objid')}}
+        row.pop('astrometry', None)  # Fresh TNS coordinates must revalidate any refinement.
         if prior:
             i = matches[0]
             current[i] = row
@@ -150,6 +151,8 @@ def merge(historical, tns_rows, timestamp):
 def main(path):
     timestamp, tns = read_snapshot(path)
     rows, audit, changes = merge(json.loads((ROOT / 'nearby-current.json').read_text()), tns, timestamp)
+    from positions import apply_refinements
+    apply_refinements(rows)
     positions = unit([s['ra'] for s in rows], [s['dec'] for s in rows])
     matches = collections.defaultdict(list)
     for obs in json.loads((ROOT / 'all-jwst-mast.json').read_text())['data']:

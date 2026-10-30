@@ -123,6 +123,8 @@ def make_composite(sn, key, products, cache, width_arcsec=None):
     cid = digest.hexdigest()[:24]
     header = target.to_header(); header['BUNIT'] = 'MJy/sr'
     header['SNNAME'] = sn['name']; header['SNRA'] = sn['ra']; header['SNDEC'] = sn['dec']
+    from positions import fits_provenance
+    fits_provenance(header, sn)
     header['RGBORDER'] = 'RED,GREEN,BLUE'; header['RGBVER'] = VERSION
     header['HISTORY'] = 'Display cube: bilinear WCS reprojection; no coadd or PSF matching.'
     for i,o in enumerate(products,1):

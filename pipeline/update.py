@@ -91,6 +91,7 @@ def build(previous=None):
   if not types:typ='Candidate'
   sn={'name':s['name'],'aliases':s['aliases'],'ra':s['ra'],'dec':s['dec'],'z':s['redshift'],'zKind':str(s.get('redshift_kind') or s.get('provenance',{}).get('catalogue','Catalogue value')),'type':typ,'host':'; '.join(s['hosts'][:2]),'discovery':s['discovery_dates'][0].replace('/','-') if s['discovery_dates'] else '', 'references':s['references'],'conflict':bool(s.get('redshift_boundary_conflict')),'checked':True,'observations':[],'source':s.get('provenance',{}).get('catalogue')}
   sn['referenceUrls']=s.get('reference_urls',[])
+  if s.get('astrometry'):sn['astrometry']=s['astrometry']
   seen=set()
   for o in matches.get(s['name'],[]):
    if o.get('dataRights','PUBLIC')!='PUBLIC':raise RuntimeError('Nonpublic data entered the public stamp pipeline')
@@ -154,6 +155,8 @@ def stamp(sn,o):
      if key in sci.header:header[key]=sci.header[key]
      elif key in hdul[0].header:header[key]=hdul[0].header[key]
     header['SNNAME']=sn['name'];header['SNRA']=sn['ra'];header['SNDEC']=sn['dec'];header['SRCURI']=o['uri'];header['HISTORY']=f'ECHO {CUTOUT_ARCSEC:g} arcsec WCS cutout; no flux measurement or background subtraction.'
+    from positions import fits_provenance
+    fits_provenance(header,sn)
     arr[~valid]=np.nan
     fits.PrimaryHDU(arr,header).writeto(cache/(o['id']+'.fits'),overwrite=True,checksum=True)
     values=arr[valid];lo,hi=np.percentile(values,[1,99.5]);span=max(float(hi-lo),float(np.std(values)),1e-12)

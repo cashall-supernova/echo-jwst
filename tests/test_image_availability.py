@@ -25,5 +25,11 @@ class ImageAvailability(unittest.TestCase):
             self.assertTrue(all(o['firstIndexedAt'] is None for o in sn['observations']))
             with patch('image_availability.validate',side_effect=lambda p:p):enrich(snapshot,None,root)
             self.assertTrue(all(o['firstIndexedAt']==snapshot['updatedAt'] for o in sn['observations']))
+            # Recentring makes new cutout IDs, but must not announce an old image as new.
+            previous=copy.deepcopy(snapshot)
+            snapshot['updatedAt']='2026-10-31T18:00:00Z'
+            for image in sn['observations']:image['id']='recentered-'+image['id']
+            with patch('image_availability.validate',side_effect=lambda p:p):enrich(snapshot,previous,root)
+            self.assertTrue(all(o['firstIndexedAt']==previous['updatedAt'] for o in sn['observations']))
 
 if __name__=='__main__':unittest.main()
