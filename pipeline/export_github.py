@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cross_archive import availability, match_links
 from run_mac import HISS_CREDENTIALS, PROJECT, now, save
 from sync_cross_links import read_hiss
+from github_workspace import workspace_root
 
 ITERATIONS = 600000
 MAX_SITE_BYTES = 950_000_000  # leave room below GitHub Pages' 1 GB cap
@@ -165,7 +166,7 @@ def export(cache, out, access=HISS_CREDENTIALS, hiss_index=None, schedule=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cache', type=Path, default=PROJECT / 'local/cache')
-    parser.add_argument('--out', type=Path, default=PROJECT / 'local/github-site')
+    parser.add_argument('--out', type=Path, default=workspace_root() / 'github-site')
     args = parser.parse_args()
     os.umask(0o077)
     export(args.cache, args.out)

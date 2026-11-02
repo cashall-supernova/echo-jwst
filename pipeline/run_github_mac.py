@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from run_mac import PROJECT, LOCAL, now, read, save, download_tns
 from export_github import export, validate_catalogs, files_for
 from publish_github import publish, verify_live, PUBLIC_URL
+from github_workspace import fresh_build
 
 
 def catalogs(cache):
@@ -45,26 +46,40 @@ def main():
         logpath=logs/('github-update-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'.log')
         status={'status':'running','started_at':now(),'hosting':'github','log':str(logpath)}
         save(LOCAL/'github-status.json',status)
+        def phase(name):
+            status['phase']=name
+            save(LOCAL/'github-status.json',status)
         oldargv=sys.argv
         try:
             with logpath.open('w',buffering=1) as log,redirect_stdout(log),redirect_stderr(log):
                 if not args.export_only:
+                    phase('tns-download')
                     download_tns(cache/'tns-public.zip')
                 if args.publish and not args.export_only:
+                    phase('imaging-scan')
                     sys.argv=[str(PROJECT/'pipeline/update.py'),'--refresh','--tns-catalog',str(cache/'tns-public.zip'),'--workers','6']
                     runpy.run_path(str(PROJECT/'pipeline/update.py'),run_name='__main__')
                     from spectra import run
+                    phase('spectra-scan')
                     run(cache/'spectra',cache/'tns-public.zip',cache/'catalog.json',refresh=True,workers=6)
+                phase('validate-cache')
                 data=catalogs(cache);validate_catalogs(data)
+                status.update(catalogue_updated_at=data['catalog']['updatedAt'],spectra_updated_at=data['spectra']['updatedAt'])
                 missing=[path for path,(file,_) in files_for(data,cache).items() if not file.is_file()]
                 if missing:raise RuntimeError(f'{len(missing)} ready files are missing; publication stopped')
                 if args.publish:
                     node=config.get('node_path') or shutil.which('node')
                     if not node or not Path(node).is_file():raise RuntimeError('Node.js is required to build the static site')
-                    subprocess.run([node,str(PROJECT/'node_modules/vite/bin/vite.js'),'build','--config','vite.github.config.ts'],cwd=PROJECT,check=True,stdout=log,stderr=log)
-                    schedule={'enabled':bool(config.get('github_schedule_enabled')),'time':'Mac updater · daily at 06:00 Hawaii time'}
-                    export(cache,LOCAL/'github-site',schedule=schedule)
-                    sha=publish()
+                    with fresh_build() as out:
+                        print('Building in unsynced workspace: '+str(out),flush=True)
+                        phase('build')
+                        subprocess.run([node,str(PROJECT/'node_modules/vite/bin/vite.js'),'build','--config','vite.github.config.ts','--outDir',str(out)],cwd=PROJECT,check=True,stdout=log,stderr=log)
+                        schedule={'enabled':bool(config.get('github_schedule_enabled')),'time':'Mac updater · daily at 06:00 Hawaii time'}
+                        phase('encrypt-export')
+                        export(cache,out,schedule=schedule)
+                        phase('github-push')
+                        sha=publish(out)
+                    phase('verify-live')
                     for attempt in range(30):
                         try:
                             if verify_live():break
@@ -73,7 +88,7 @@ def main():
                         time.sleep(20)
                     else:raise RuntimeError('GitHub Pages deployment has not completed; inspect GitHub Actions')
                     status.update(commit=sha,url=PUBLIC_URL)
-            status.update(status='success',finished_at=now())
+            status.update(status='success',phase='complete',finished_at=now())
             print('ECHO GitHub '+('publication' if args.publish else 'readiness check')+' succeeded.')
             return 0
         except Exception as error:

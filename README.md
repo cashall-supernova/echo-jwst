@@ -39,6 +39,25 @@ The updater downloads the daily TNS catalogue using locally stored bot access, c
 
 The Mac schedule is installed separately after a verified publication and confirmation that the obsolete cloud task is paused. The website remains available when the Mac is asleep; new data wait for its next successful run. Inspect `local/github-status.json`, `local/github-publication.json` and `local/logs/` for local operation status. These files are ignored by Git.
 
+Builds and the owned publication checkout live outside Documents, under
+`~/Library/Caches/edu.hawaii.echo` on macOS (`$XDG_CACHE_HOME/echo` or
+`~/.cache/echo` elsewhere). `ECHO_GITHUB_WORK_DIR` overrides that location; choose
+an unsynced directory. Each scheduled run builds into a fresh temporary folder
+there and removes only that run's generated output afterwards. Manual builds and
+exports use `github-site` under the same root. Archive inputs and scientific
+results remain in `local/cache`.
+
+An interrupted publication with uncommitted files is preserved as a
+`github-publication-recovery-*` directory before fetching a clean checkout.
+Unexpected remotes are rejected, and pushes remain fast-forward only. Old
+`local/github-site` and `local/github-publication` directories are no longer used
+or cleared by the updater. Status records identify the failed phase. To retry
+publication of a completed, validated scan without downloading it again, run:
+
+```
+.venv/bin/python pipeline/run_github_mac.py --publish --export-only
+```
+
 The HISS reciprocal links should use the public ECHO origin `https://cashall-supernova.github.io/echo-jwst/`. Individual destinations are `#SN2023ixf` for imaging and `spectra/#SN2023ixf` for spectra. HISS includes its matched links in its encrypted index on subsequent builds.
 
 ## Scientific scope

@@ -8,10 +8,12 @@ import re
 import shutil
 import subprocess
 import time
+import uuid
 
 import requests
 from export_github import derive, login, unseal, MAX_SITE_BYTES
 from run_mac import PROJECT, LOCAL, save, now
+from github_workspace import workspace_root
 
 REPOSITORY = 'cashall-supernova/echo-jwst'
 PUBLIC_URL = 'https://cashall-supernova.github.io/echo-jwst/'
@@ -102,8 +104,30 @@ def git(checkout, *args):
     return result.stdout.strip()
 
 
-def publish(source=LOCAL / 'github-site', create=False):
-    source = Path(source)
+def prepare_checkout(checkout, remote, existing_repo=True):
+    """Keep interrupted work for inspection, then recover an owned checkout."""
+    if (checkout / '.git').exists():
+        if git(checkout,'remote','get-url','origin') != remote:
+            raise RuntimeError('Unexpected publication remote')
+        if git(checkout,'status','--porcelain'):
+            recovery = checkout.with_name('github-publication-recovery-'+uuid.uuid4().hex[:12])
+            checkout.rename(recovery)
+            print('Preserved unfinished publication checkout: '+str(recovery),flush=True)
+    elif checkout.exists() and any(checkout.iterdir()):
+        raise RuntimeError('Publication directory contains unexpected files without Git metadata')
+    if not (checkout / '.git').exists():
+        checkout.mkdir(mode=0o700,parents=True,exist_ok=True)
+        git(checkout,'init','-b','main')
+        git(checkout,'remote','add','origin',remote)
+        if existing_repo:
+            git(checkout,'fetch','--depth=1','origin','main')
+            git(checkout,'checkout','-B','main','origin/main')
+    elif git(checkout,'ls-remote','--heads','origin','main'):
+        git(checkout,'pull','--ff-only','origin','main')
+
+
+def publish(source=None, create=False):
+    source = Path(source) if source is not None else workspace_root() / 'github-site'
     lock = validate_output(source)
     s = client()
     endpoint = 'https://api.github.com/repos/'+REPOSITORY
@@ -118,21 +142,8 @@ def publish(source=LOCAL / 'github-site', create=False):
     else:
         check(repo)
     remote = repo.json()['clone_url']
-    checkout = LOCAL / 'github-publication'
-    if not (checkout / '.git').exists():
-        checkout.mkdir(parents=True,exist_ok=True)
-        git(checkout,'init','-b','main')
-        git(checkout,'remote','add','origin',remote)
-        if repo.json().get('size',0)>0:
-            git(checkout,'fetch','origin','main')
-            git(checkout,'checkout','-B','main','origin/main')
-    else:
-        if git(checkout,'remote','get-url','origin') != remote:
-            raise RuntimeError('Unexpected publication remote')
-        if git(checkout,'status','--porcelain'):
-            raise RuntimeError('Publication checkout has uncommitted changes')
-        if git(checkout,'ls-remote','--heads','origin','main'):
-            git(checkout,'pull','--ff-only','origin','main')
+    checkout = workspace_root() / 'github-publication'
+    prepare_checkout(checkout,remote,existing_repo=repo.json().get('size',0)>0)
     docs = checkout / 'docs'
     if docs.exists():
         shutil.rmtree(docs)  # this owned checkout contains only generated output
