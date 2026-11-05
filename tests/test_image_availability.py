@@ -32,4 +32,26 @@ class ImageAvailability(unittest.TestCase):
             with patch('image_availability.validate',side_effect=lambda p:p):enrich(snapshot,previous,root)
             self.assertTrue(all(o['firstIndexedAt']==previous['updatedAt'] for o in sn['observations']))
 
+    def test_new_sn_arrival_is_stable_and_legacy_dates_stay_unknown(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            for file in ('all-jwst-mast.json','all-cal2-mast.json'):(root/file).write_text('[]')
+            previous={'objects':[{'name':'SN2008S','observations':[]}]}
+            snapshot={'updatedAt':'2026-11-04T16:00:00Z','objects':[
+                {'name':'SN2008S','observations':[]},
+                {'name':'AT2026ahvu','observations':[{'id':'original','uri':'same-image','obsId':'one'}]}]}
+            with patch('image_availability.validate',side_effect=lambda p:p):enrich(snapshot,previous,root)
+            self.assertIsNone(snapshot['objects'][0]['firstIndexedAt'])
+            self.assertEqual(snapshot['objects'][1]['firstIndexedAt'],snapshot['updatedAt'])
+            previous=copy.deepcopy(snapshot)
+            snapshot['updatedAt']='2026-11-05T16:00:00Z'
+            sn=snapshot['objects'][1];sn['name']='SN2026ahvu'
+            sn['observations'][0]['id']='new-centre'
+            sn['observations'].append({'id':'new-image','uri':'another-image','obsId':'two'})
+            with patch('image_availability.validate',side_effect=lambda p:p):enrich(snapshot,previous,root)
+            self.assertEqual(sn['firstIndexedAt'],previous['updatedAt'])
+            self.assertEqual(sn['observations'][0]['firstIndexedAt'],previous['updatedAt'])
+            self.assertEqual(sn['observations'][1]['firstIndexedAt'],snapshot['updatedAt'])
+            self.assertIsNone(snapshot['objects'][0]['firstIndexedAt'])
+
 if __name__=='__main__':unittest.main()

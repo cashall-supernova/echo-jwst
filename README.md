@@ -62,6 +62,14 @@ The HISS reciprocal links should use the public ECHO origin `https://cashall-sup
 
 ## Scientific scope
 
+JWST images and Latest images default to **Recent activity**: the most recent
+recorded SN addition, public-image match, or public release. A newly catalogued
+SN with older pre-explosion images therefore appears near the top. Rows explain
+the event, and separate public-release and observation-date sorts remain
+available. Arrival dates persist across daily rescans and coordinate recentering;
+unknown historical arrival dates remain unknown. Rebuilding or republishing the
+website does not count as new activity.
+
 The image catalogue selects reported z < 0.02. The spectra catalogue searches all redshifts and opens with the same nearby filter. TNS is supplemented by historical OSC and SIMBAD records. Missing redshifts, unclassified objects and incomplete historical catalogues limit the sample; archive footprint coverage is not a confirmed SN detection.
 
 Colour previews currently require three usable filters from the same UTC day, instrument and program; MIRI and NIRCam remain separate. Multi-day mosaics are deliberately excluded. Display contrast, spectral binning, smoothing, epoch offsets and line markers change the visualisation, not the original downloaded measurements. No forced photometry or independent star-based registration is performed.
